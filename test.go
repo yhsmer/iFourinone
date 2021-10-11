@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -80,7 +81,24 @@ func DoTask(args *string, ret *map[string]int) int {
 }
 
 
+type Contractor struct {
+	name string
+	ctor *Contractor
+}
+
+func (contractor Contractor)toNext(ctor Contractor) *Contractor{
+	fmt.Println(contractor.name)
+	contractor.ctor = &ctor
+	return &ctor
+}
+
+func (contractor Contractor) printName(){
+	fmt.Println(contractor.name)
+}
+
 func main(){
-	m := map[string]string{"filepath": "./in"}
-	fun(m)
+	c := Contractor{"qqqq",nil}
+	b := c.toNext(Contractor{name: "we", ctor: nil})
+	b.printName()
+
 }

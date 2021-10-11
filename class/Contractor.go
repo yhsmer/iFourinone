@@ -10,6 +10,15 @@ import (
 )
 
 type Contractor struct {
+	Name string
+	Ctor *Contractor
+}
+
+func (contractor Contractor) ToNext(ctor Contractor, m map[string]string) *Contractor{
+	//fmt.Println(contractor.name)
+	contractor.Ctor = &ctor
+	ctor.ScheduleWork(m)
+	return &ctor
 }
 
 func (contractor Contractor) ScheduleWork(m map[string]string) {
