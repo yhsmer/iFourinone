@@ -102,7 +102,7 @@ func (contractor Contractor) ScheduleWork(m map[string]string) {
 		}
 	}
 
-	log.Println("Contractor's output is as follows >>>")
+	log.Println("Contractor's output is as follows")
 	for k,v := range finalOutput{
 		fmt.Println(k + " " + strconv.Itoa(v))
 	}

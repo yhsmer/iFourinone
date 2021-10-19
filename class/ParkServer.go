@@ -1,9 +1,13 @@
 package class
 
 import (
+	"fmt"
+	"iFourinone/consistenthash"
 	"log"
 	"net"
+	"net/http"
 	"net/rpc"
+	"strings"
 )
 
 //农民工注册信息结构
@@ -18,6 +22,8 @@ type WaitingWorkers struct {
 type Park struct {
 	// 存储注册信息汇总
 	workAddrs []string
+	caches []string
+	consistendHash *consistenthash.Consistenthash
 }
 var park Park
 
@@ -48,21 +54,6 @@ func (s *Service) QueryAllWorkers(redundant int, ret *[]string) error {
 	*ret = readyNodes
 	return nil
 }
-/*
-client, err := rpc.Dial("tcp", "localhost:1234")
-    if err != nil {
-        log.Fatal("dialing:", err)
-    }
-
-    var reply string
-    err = client.Call("HelloService.Hello", "hello", &reply)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    fmt.Println(reply)
- */
-
 
 //循环监听包工头雇工服务，设置监听，提供RPC服务的函数在此注册
 //正常连接之后通过rpc.ServeConn函数在该TCP上使用注册的（提供RPC服务）函数为对方提供服务
@@ -105,7 +96,7 @@ func logInServer() {
 		return
 	}
 	defer listener.Close()
-	log.Println("ParkServer is waiting connection ...")
+	log.Println("ParkServer is waiting workers's connection at localhost:8000...")
 
 	//循环监听注册
 	for {
@@ -130,27 +121,127 @@ func HandleLogInConn(conn net.Conn) {
 		log.Println("HandleConn conn.Read err:", err)
 		return
 	}
+	args := strings.Split(string(buf[:n]),"-")
 
-	works.WorkAddr = string(buf[:n])
-	park.workAddrs = append(park.workAddrs, works.WorkAddr)
+	if args[1] == "worker" {
+		works.WorkAddr = args[0]
+		park.workAddrs = append(park.workAddrs, works.WorkAddr)
 
-	log.Println("MigrantWorker of", works.WorkAddr, "connect successfully!")
+		log.Println(works.WorkAddr, "connect successfully!")
+		log.Println("success to get the", works.WorkAddr, "'s log message: I'm", string(buf[:n]))
+	} else if args[1] == "cache"{
+		if park.consistendHash == nil{
+			park.consistendHash = consistenthash.New(nil)
+		}
+		park.consistendHash.Add(args[0])
+		park.caches = append(park.caches, args[0])
 
-	log.Println("success to get the", works.WorkAddr, "'s log message: I'm", string(buf[:n]))
+		log.Println(args[0], "connect successfully!")
+		log.Println("success to get the", args[1], "'s log message: I'm", args[0])
+	}
+
+
 
 	//回写表示接收成功
 	conn.Write([]byte("ok"))
+}
 
+type server struct{
+	// http://localhost:8002/${bashPath}
+	basePath string
+}
+func NewServer() *server {
+	return &server{
+		basePath: "/cache",
+	}
+}
+
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !strings.HasPrefix(r.URL.Path, s.basePath) {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	log.Println(r.URL.Path)
+
+	if strings.Contains(r.URL.Path, "Get"){
+		key := r.URL.Query().Get("key")
+		log.Println("Get.... key -> " + key)
+
+		addr := park.consistendHash.Get(key)
+		if addr == ""{
+			w.Write([]byte("There has no cache node existed"))
+			return
+		}
+
+		// 创建TCP连接,连接职介者在该端口的监听工头雇工服务
+		conn, err := rpc.Dial("tcp", addr)
+		if err != nil {
+			log.Println("ServerHttp Dial rpc.Dial err:", err)
+			return
+		}
+		// 在当前函数返回前执行传入的函数，一般用于关闭资源等等
+		defer conn.Close()
+
+		//远程调用ParkServer的方法
+		var ret Value
+		err = conn.Call("CacheNode.GetCache", key, &ret)
+		// ret返回之后为string
+		if err != nil {
+			log.Println("CacheNode.GetCache conn.Call err:", err)
+			return
+		}
+		// transform Value to string
+		value := fmt.Sprint(ret)
+		log.Println("key -> " + key + " & value -> " + value)
+		w.Write([]byte(value))
+
+	}else if strings.Contains(r.URL.Path, "Add"){
+		log.Println("Add....")
+		key := r.URL.Query().Get("key")
+		value := r.URL.Query().Get("value")
+		log.Println("Add : key -> " + key + " value -> " + value)
+
+		addr := park.consistendHash.Get(key)
+		if addr == ""{
+			w.Write([]byte("There has no cache node existed"))
+			return
+		}
+
+		// 创建TCP连接,连接职介者在该端口的监听工头雇工服务
+		conn, err := rpc.Dial("tcp", addr)
+		if err != nil {
+			log.Println("ServerHttp Dial rpc.Dial err:", err)
+			return
+		}
+		// 在当前函数返回前执行传入的函数，一般用于关闭资源等等
+		defer conn.Close()
+
+		//远程调用ParkServer的方法
+		var ret Value
+		err = conn.Call("CacheNode.AddCache", key + " " + value, &ret)
+		// ret返回之后为string
+		if err != nil {
+			log.Println("CacheNode.AddCache conn.Call err:", err)
+			return
+		}
+		w.Write([]byte("Add cache successful"))
+	}
 }
 
 //启动ParkServer
 func (park Park) ParkStart() {
-
 	//启动监听农民工注册服务
 	go logInServer()
 
 	//启动监听包工头雇工服务
 	go waitingWorkerServer()
 
+	s := NewServer()
+	log.Println("cache server is running at localhost:8002")
+	err := http.ListenAndServe("localhost:8002", s)
+	if err != nil {
+		log.Println("http.ListenAndServe (port : 8002) err:", err)
+		return
+	}
 	for{}
 }

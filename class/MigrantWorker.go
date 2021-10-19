@@ -20,7 +20,7 @@ type WorkRPC struct {
 }
 
 //向职介者注册
-func logInToPark(ip string, port string) {
+func logInToPark(ip string, port string, logType string){
 	//创建TCP连接,连接职介者在该端口的农名工监听服务
 	conn, err := net.Dial("tcp", "127.0.0.1:8000")
 	if err != nil {
@@ -31,7 +31,7 @@ func logInToPark(ip string, port string) {
 
 	//发送注册的RPC服务地址
 	// 农名工工作在哪个IP哪个端口
-	conn.Write([]byte(ip + ":" + port))
+	conn.Write([]byte(ip + ":" + port + "-" + logType))
 
 	//接收来自ParkServer的注册成功信息
 	buf := make([]byte, 1024)
@@ -119,7 +119,7 @@ func (workers Workers) StartWork() {
 	go startRPC(ip,port)
 
 	//向职介者注册
-	go logInToPark(ip, port)
+	go logInToPark(ip, port, "worker")
 
 	for {}
 }
