@@ -146,11 +146,15 @@ func (fs FSNode)FSStart() {
 }
 
 /*
-upload commands:
-	curl -X POST http://127.0.0.1:19000/upload -F "upload=@/Users/yexingming/Pictures/1.txt" -F "path=dir" -H "Content-Type: multipart/form-data"
-	curl -X POST http://127.0.0.1:19000/upload -F "upload=@/Users/yexingming/Pictures/1.txt" -F "path=." -H "Content-Type: multipart/form-data"
+   upload commands:
+   	curl -X POST http://127.0.0.1:19005/upload -F "upload=@/Users/yexingming/Pictures/1.txt" -F "path=dir" -H "Content-Type: multipart/form-data"
+   	curl -X POST http://127.0.0.1:19005/upload -F "upload=@/Users/yexingming/Pictures/1.txt" -F "path=." -H "Content-Type: multipart/form-data"
 
-delete commands:
-	curl -X POST http://127.0.0.1:19000/delete -F "file=1.txt" -H "Content-Type: multipart/form-data"
-	curl -X POST http://127.0.0.1:19000/upload -F "file=dir/1.txt" -H "Content-Type: multipart/form-data"
+   delete commands:
+	curl -X POST http://127.0.0.1:19005/delete -F "file=dir/1.txt" -H "Content-Type: multipart/form-data"
+   	curl -X POST http://127.0.0.1:19005/delete -F "file=1.txt" -H "Content-Type: multipart/form-data"
 */
+
+
+
+

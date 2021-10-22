@@ -5,12 +5,22 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	"strings"
 )
 
+type IDoTask func(args *string, ret *map[string]int) *map[string]int
 //农民工
 type Workers struct {
+	idoTask IDoTask
 }
+
+func New(d IDoTask) *Workers {
+	w := &Workers{
+		idoTask: d,
+	}
+	return w
+}
+
+var workers Workers
 
 // RPC服务
 // 本地用于给远程调用的方法需要注册成一个RPC服务之后才能给远程使用
@@ -84,11 +94,12 @@ func startRPC(ip string, port string) {
 func (workRPC *WorkRPC) DoTask(args *string, ret *map[string]int) error {
 	log.Println(workRPC.ip + workRPC.port + ": is working")
 
-	strs := strings.Fields(strings.TrimSpace(*args))
-	for _, s := range strs{
-		(*ret)[s]++
-		log.Println(s)
-	}
+	workers.idoTask(args,ret)
+	//strs := strings.Fields(strings.TrimSpace(*args))
+	//for _, s := range strs{
+	//	(*ret)[s]++
+	//	log.Println(s)
+	//}
 
 	workRPC.ready = true
 
@@ -104,7 +115,9 @@ func (workRPC *WorkRPC) CheckStatus(redundant int, ret *bool) error {
 
 
 //农民工启动
-func (workers Workers) StartWork() {
+func (wk Workers) StartWork(w *Workers) {
+	workers = *w
+
 	//获取命令行参数
 	args := os.Args
 	if len(args) != 3 {
