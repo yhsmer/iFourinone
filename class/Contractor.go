@@ -41,6 +41,7 @@ func (contractor Contractor) ScheduleWork(m map[string]string) {
 	}
 	log.Printf("All waiting works: %v", ret)
 
+	///////////////////// map
 	file_name := m["filepath"]
 
 	file, err := os.Open(file_name)
@@ -63,6 +64,7 @@ func (contractor Contractor) ScheduleWork(m map[string]string) {
 		worksOutput[i] = make(map[string]int)
 	}
 
+	// system call
 	calls := make([]*rpc.Call,len(ret))
 	for i, s := range ret{
 		client, err := rpc.Dial("tcp", s)
@@ -95,6 +97,7 @@ func (contractor Contractor) ScheduleWork(m map[string]string) {
 		}
 	}
 
+	// reduce part
 	finalOutput := make(map[string]int)
 	for _, m := range worksOutput{
 		for k,v := range m{
@@ -102,7 +105,7 @@ func (contractor Contractor) ScheduleWork(m map[string]string) {
 		}
 	}
 
-	log.Println("Contractor's output is as follows")
+	fmt.Println("Contractor's output is as follows")
 	for k,v := range finalOutput{
 		fmt.Println(k + " " + strconv.Itoa(v))
 	}

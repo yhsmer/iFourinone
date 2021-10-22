@@ -1,0 +1,10 @@
+<!-- templates/arr.html -->
+<html>
+<body>
+<p>hello, {{.title}}</p>
+{{range $index, $ele := .stuArr }}
+<p>{{ $index }}: {{ $ele.Name }} is {{ $ele.Age }} years old</p>
+<a href= {{ $ele.Name }}> {{ $ele.Name }} </a>
+{{ end }}
+</body>
+</html>

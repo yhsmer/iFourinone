@@ -7,6 +7,7 @@ A distributed system, based on Fourinone 2.0
 - 8000 : listen to register for workers
 - 8001 : listen to hire workers 
 - 8002 : server for cache
+- 8003 : fs server
 
 ## How to run the demo?
 ### distribute calculate

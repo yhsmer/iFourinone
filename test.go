@@ -4,9 +4,14 @@ import (
 	"bufio"
 	"container/list"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -205,12 +210,134 @@ func startServer() {
 	http.ListenAndServe("localhost:9999", &s)
 }
 
+func sayHelloHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("qqqqq")
+	http.Redirect(w, r, "http://localhost:8088", http.StatusFound) //重定向
+	/*content :=[]byte("hello world")
+	//向test.txt写入hello world
+	err := ioutil.WriteFile("test.txt", content,0644)
+	if err !=nil{
+		panic(err)
+	}*/
+}
 
+func ForwardHandler(writer http.ResponseWriter, request *http.Request) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "baidu.com",
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(u)
+	request.URL.Path = ""
+	proxy.ServeHTTP(writer, request)
+}
+
+func test() {
+	p, _ := filepath.Abs(filepath.Dir("/Users/yexingming/Downloads/fourinone/"))
+	http.Handle("/", http.FileServer(http.Dir(p)))
+	http.HandleFunc("/a", ForwardHandler)//   设置访问路由
+	log.Fatal(http.ListenAndServe(":8089",nil))
+}
+
+type student struct {
+	Name string
+	Age  int8
+}
+
+func ginDemo()  {
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default()
+	r.LoadHTMLGlob("templates/*")
+	//stu1 := &student{Name: "https://baidu.com", Age: 20}
+	//stu2 := &student{Name: "Jack", Age: 22}
+	str := []string{"http://localhost:9999/testfs", "https://baidu.com"}
+	r.GET("/testfs", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "testfs.html", gin.H{
+			"title":  "Gin",
+			"stuArr": str,
+		})
+	})
+
+	r.Run(":9999")
+}
+
+func ginFs() {
+	//ginDemo()
+	//http.ListenAndServe(":8080", http.FileServer(http.Dir(".")))
+
+	r := gin.Default()
+	r.LoadHTMLFiles( "./templates/123.html")
+	// 静态文件服务
+	// 显示当前文件夹下面的所有文件 / 或者指定文件
+	// 页面返回：服务器当前路径下地文件信息
+	r.StaticFS("/fs", http.Dir("/Users/yexingming/Downloads/fourinone/"))
+
+	r.GET("/api/:name/:age", func(c *gin.Context) {
+		name := c.Param("name")
+		age := c.Param("age")
+		c.JSON(http.StatusOK, gin.H{
+			"name:": name,
+			"age: ":age,
+		})
+	})
+
+
+	r.Run("0.0.0.0:8000")
+
+}
+
+func uploadFile(c *gin.Context) {
+	// FormFile方法会读取参数“123”后面的文件名，返回值是一个File指针，和一个FileHeader指针，和一个err错误。
+	file, header, err := c.Request.FormFile("123")
+	if err != nil {
+		c.String(http.StatusBadRequest, "Bad request")
+		return
+	}
+
+	// header调用Filename方法，就可以得到文件名
+	filename := header.Filename
+	fmt.Println(file, err, filename)
+
+	// 获取创建文件的路径
+	path := c.DefaultPostForm("path", "anonymous")
+	fmt.Println(path)
+
+	// 创建一个文件，文件名为filename，这里的返回值out也是一个File指针
+	out, err := os.Create( path + "/" + filename)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer out.Close()
+
+	// 将file的内容拷贝到out
+	_, err = io.Copy(out, file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.String(http.StatusCreated, "123 successful \n")
+}
 
 func main() {
-	//startServer()
-	var v Value
-	v = 123
-	k := fmt.Sprint(v)
-	fmt.Println(k)
+	path := "./ioasdf/dsf/df"
+	if strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
+	}
+	fmt.Println(path)
+
+	//router := gin.Default()
+	//
+	//// 调用POST方法，传入路由参数和路由函数
+	//router.POST("/123", uploadFile)
+	//
+	//// 监听端口8000，注意冒号。
+	//router.Run(":8000")
 }
+
+/*
+curl -X POST http://127.0.0.1:8000/upload -F "upload=@/Users/yexingming/Pictures/txt" -H "Content-Type: multipart/form-data"
+curl -X POST http://127.0.0.1:8000/upload -F "upload=@/Users/yexingming/Pictures/txt" -F "path=." -H "Content-Type: multipart/form-data"
+curl -X POST http://127.0.0.1:8000/upload -F "upload=@/Users/yexingming/Pictures/txt" -F "path=./123" -H "Content-Type: multipart/form-data"
+*/

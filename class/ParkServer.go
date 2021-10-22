@@ -2,6 +2,7 @@ package class
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"iFourinone/consistenthash"
 	"log"
 	"net"
@@ -23,6 +24,7 @@ type Park struct {
 	// 存储注册信息汇总
 	workAddrs []string
 	caches []string
+	fs []string
 	consistendHash *consistenthash.Consistenthash
 }
 var park Park
@@ -127,8 +129,9 @@ func HandleLogInConn(conn net.Conn) {
 		works.WorkAddr = args[0]
 		park.workAddrs = append(park.workAddrs, works.WorkAddr)
 
-		log.Println(works.WorkAddr, "connect successfully!")
-		log.Println("success to get the", works.WorkAddr, "'s log message: I'm", string(buf[:n]))
+		/*log.Println(works.WorkAddr, "connect successfully!")
+		log.Println("success to get the", works.WorkAddr, "'s log message: I'm", string(buf[:n]))*/
+
 	} else if args[1] == "cache"{
 		if park.consistendHash == nil{
 			park.consistendHash = consistenthash.New(nil)
@@ -136,11 +139,12 @@ func HandleLogInConn(conn net.Conn) {
 		park.consistendHash.Add(args[0])
 		park.caches = append(park.caches, args[0])
 
-		log.Println(args[0], "connect successfully!")
-		log.Println("success to get the", args[1], "'s log message: I'm", args[0])
+	} else if args[1] == "fs"{
+		park.fs = append(park.fs, "http://" + args[0])
 	}
 
-
+	log.Println(args[0], "connect successfully!")
+	log.Println("success to get the", args[1], "'s log message: I'm", args[0])
 
 	//回写表示接收成功
 	conn.Write([]byte("ok"))
@@ -150,6 +154,7 @@ type server struct{
 	// http://localhost:8002/${bashPath}
 	basePath string
 }
+
 func NewServer() *server {
 	return &server{
 		basePath: "/cache",
@@ -195,7 +200,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Println("key -> " + key + " & value -> " + value)
 		w.Write([]byte(value))
 
-	}else if strings.Contains(r.URL.Path, "Add"){
+	} else if strings.Contains(r.URL.Path, "Add") {
 		log.Println("Add....")
 		key := r.URL.Query().Get("key")
 		value := r.URL.Query().Get("value")
@@ -228,13 +233,36 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func startFsServer()  {
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default()
+	r.LoadHTMLGlob("templates/*")
+
+	r.GET("/fs", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "fs.html", gin.H{
+			"title":  "All Servers:",
+			"stuArr": park.fs,
+		})
+	})
+	log.Println("fs server is running at localhost:8003")
+
+	err := r.Run(":8003")
+	if err != nil {
+		log.Println("startFsServer r.Run error")
+		log.Println(err)
+		return
+	}
+}
+
 //启动ParkServer
 func (park Park) ParkStart() {
-	//启动监听农民工注册服务
+	// 启动监听农民工注册服务
 	go logInServer()
 
-	//启动监听包工头雇工服务
+	// 启动监听包工头雇工服务
 	go waitingWorkerServer()
+
+	go startFsServer()
 
 	s := NewServer()
 	log.Println("cache server is running at localhost:8002")

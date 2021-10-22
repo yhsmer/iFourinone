@@ -1,0 +1,9 @@
+<!-- templates/fs.html-->
+<html>
+<body>
+    <p>{{.title}}</p>
+    {{range $index, $fs := .stuArr }}
+        {{ $index }} &nbsp; : &nbsp; <a href={{ $fs }}> {{ $fs }}</a><br/>
+    {{ end }}
+</body>
+</html>
