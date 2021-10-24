@@ -71,7 +71,6 @@ func startCacheRPC(ip string, port string, maxBytes int64) {
 	}
 }
 
-// 供远程调用查看节点状态
 func (c *CacheNode) GetCache(key string, value *Value) error {
 	v, ok := c.Get(key)
 	if ok{

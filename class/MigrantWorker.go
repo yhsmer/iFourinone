@@ -113,7 +113,6 @@ func (workRPC *WorkRPC) CheckStatus(redundant int, ret *bool) error {
 	return nil
 }
 
-
 //农民工启动
 func (wk Workers) StartWork(w *Workers) {
 	workers = *w
